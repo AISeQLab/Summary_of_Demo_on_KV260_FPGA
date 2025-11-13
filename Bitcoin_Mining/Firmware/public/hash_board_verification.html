@@ -1,0 +1,127 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Hash Board Verification</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet" />
+  <style>
+    body {
+      background: #f9f9f9;
+    }
+    .log-box {
+      background: #000;
+      color: #0f0;
+      padding: 10px;
+      white-space: pre-wrap;
+      height: 300px;
+      overflow-y: auto;
+      font-family: monospace;
+      margin-top: 10px;
+      border: 1px solid #333;
+      border-radius: 4px;
+    }
+  </style>
+</head>
+<body class="p-3">
+  <h4>Hash Board Verification</h4>
+  <p>
+    Enter the mined block number to start verification.
+    The Mining Log will display output directly from the C program.
+  </p>
+
+  <!-- Input and action buttons -->
+  <div class="input-group mb-3" style="max-width:420px;">
+    <input
+      type="number"
+      id="blockInput"
+      class="form-control"
+      value="900000"
+      placeholder="Mined block number"
+    />
+    <button class="btn btn-primary" onclick="startVerification()">Start</button>
+    <button class="btn btn-danger" onclick="stopVerification()">Stop</button>
+  </div>
+  <div id="errorMsg" class="text-danger mb-2"></div>
+
+  <!-- Log output -->
+  <h5>Mining Log</h5>
+  <div id="logBox" class="log-box">Waiting for output...</div>
+
+  <script>
+    let logInterval = null;
+
+    // ===== Start Verification =====
+    function startVerification() {
+      const blockVal = document.getElementById('blockInput').value.trim();
+      const errorMsg = document.getElementById('errorMsg');
+      errorMsg.textContent = '';
+
+      // Validate input
+      if (!/^\d+$/.test(blockVal)) {
+        errorMsg.textContent = '[ERROR] Invalid input: please enter a valid block number.';
+        return;
+      }
+
+      // Call backend to start
+      fetch('/api/verification/start', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ block: blockVal })
+      })
+        .then(r => r.text())
+        .then(txt => {
+          console.log('[START]', txt);
+          const logBox = document.getElementById('logBox');
+          logBox.textContent = `▶ Verification started for block ${blockVal}\n${txt}\n`;
+          startLogPolling();
+        })
+        .catch(e => {
+          errorMsg.textContent = '[ERROR] Error starting verification: ' + e;
+        });
+    }
+
+    // ===== Stop Verification =====
+    function stopVerification() {
+      fetch('/api/verification/stop', { method: 'POST' })
+        .then(r => r.text())
+        .then(txt => {
+          console.log('[STOP]', txt);
+          const logBox = document.getElementById('logBox');
+          logBox.textContent += `\n ${txt}\n`;
+          stopLogPolling();
+        })
+        .catch(e => {
+          document.getElementById('errorMsg').textContent = '[ERROR] Error stopping verification: ' + e;
+        });
+    }
+
+    // ===== Poll log from backend every 1s =====
+    function startLogPolling() {
+      stopLogPolling(); // clear old interval
+      logInterval = setInterval(() => {
+        fetch('/api/verification/log')
+          .then(r => r.text())
+          .then(txt => {
+            const box = document.getElementById('logBox');
+            box.textContent = txt || 'No output yet...';
+            box.scrollTop = box.scrollHeight;
+          })
+          .catch(e => {
+            console.error('[LOG ERROR]', e);
+          });
+      }, 1000);
+    }
+
+    // ===== Stop polling =====
+    function stopLogPolling() {
+      if (logInterval) {
+        clearInterval(logInterval);
+        logInterval = null;
+      }
+    }
+
+    // Stop polling when leaving page
+    window.addEventListener('beforeunload', stopLogPolling);
+  </script>
+</body>
+</html>

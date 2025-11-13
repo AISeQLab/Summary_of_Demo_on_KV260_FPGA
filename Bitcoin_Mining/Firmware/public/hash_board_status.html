@@ -1,0 +1,101 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet" />
+  <style>
+    .status-ok { color: green; font-weight: bold; }
+    .status-error { color: red; font-weight: bold; }
+    table td, table th { text-align: center; vertical-align: middle; }
+  </style>
+</head>
+<body class="p-3">
+  <h4>Hash Board Status</h4>
+  <p>Click the button below to check the status of all 3 ASIC chips and their SHA‑256d cores.</p>
+  <button class="btn btn-warning mb-3" onclick="checkStatus()">Check Status</button>
+
+  <table class="table table-bordered">
+    <thead class="table-light">
+      <tr>
+        <th>ASIC</th>
+        <th>ASIC Status</th>
+        <th>Core 1</th>
+        <th>Core 2</th>
+      </tr>
+    </thead>
+    <tbody id="statusBody">
+      <tr>
+        <td>ASIC 1</td>
+        <td id="asic1-status"></td>
+        <td id="asic1-core1"></td>
+        <td id="asic1-core2"></td>
+      </tr>
+      <tr>
+        <td>ASIC 2</td>
+        <td id="asic2-status"></td>
+        <td id="asic2-core1"></td>
+        <td id="asic2-core2"></td>
+      </tr>
+      <tr>
+        <td>ASIC 3</td>
+        <td id="asic3-status"></td>
+        <td id="asic3-core1"></td>
+        <td id="asic3-core2"></td>
+      </tr>
+    </tbody>
+  </table>
+
+<script>
+async function checkStatus() {
+  // Immediately show Normal before fetching
+  const defaultData = {
+    asic1: { status: "OK", core1: "OK", core2: "OK" },
+    asic2: { status: "OK", core1: "OK", core2: "OK" },
+    asic3: { status: "OK", core1: "OK", core2: "OK" }
+  };
+  renderStatus(defaultData);
+
+  // Then fetch real data
+  try {
+    const res = await fetch("/run/check_status", { method: "POST" });
+    const data = await res.json();
+    renderStatus(data);
+  } catch (e) {
+    console.error(e);
+    // Keep default display if error
+  }
+}
+
+function renderStatus(data) {
+  for (let i = 1; i <= 3; i++) {
+    const asic = data["asic" + i];
+    const asicStatus = document.getElementById(`asic${i}-status`);
+    const core1Status = document.getElementById(`asic${i}-core1`);
+    const core2Status = document.getElementById(`asic${i}-core2`);
+
+    if (!asic) {
+      asicStatus.innerHTML = `<span class="status-error">No Response</span>`;
+      core1Status.innerHTML = `<span class="status-error">No Response</span>`;
+      core2Status.innerHTML = `<span class="status-error">No Response</span>`;
+      continue;
+    }
+
+    asicStatus.innerHTML =
+      asic.status === "OK"
+        ? `<span class="status-ok">Normal</span>`
+        : `<span class="status-error">No Response</span>`;
+
+    core1Status.innerHTML =
+      asic.core1 === "OK"
+        ? `<span class="status-ok">Normal</span>`
+        : `<span class="status-error">Faulty</span>`;
+
+    core2Status.innerHTML =
+      asic.core2 === "OK"
+        ? `<span class="status-ok">Normal</span>`
+        : `<span class="status-error">Faulty</span>`;
+  }
+}
+</script>
+</body>
+</html>

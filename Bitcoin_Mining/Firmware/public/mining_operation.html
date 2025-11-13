@@ -1,0 +1,115 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Mining Operation</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet" />
+  <style>
+    .log-box {
+      background: #212529;
+      color: #f8f9fa;
+      padding: 10px;
+      border-radius: 5px;
+      height: 250px;
+      overflow-y: auto;
+      font-family: monospace;
+      white-space: pre-wrap;
+    }
+  </style>
+</head>
+<body class="p-3">
+  <h4>Mining Operation</h4>
+  <p>Fill in the required information below and start mining.</p>
+
+  <!-- Input fields -->
+  <div class="mb-3">
+    <label for="poolUrl" class="form-label">Pool URL</label>
+    <input type="text" class="form-control" id="poolUrl" value="stratum+tcp://v2.stratum.braiins.com:3333">
+  </div>
+  <div class="mb-3">
+    <label for="workerName" class="form-label">Worker Name</label>
+    <input type="text" class="form-control" id="workerName" value="hoailuan-p.workerName">
+  </div>
+  <div class="mb-3">
+    <label for="workerPass" class="form-label">Worker Password</label>
+    <input type="text" class="form-control" id="workerPass" value="anything123,d=2">
+  </div>
+
+  <!-- Buttons -->
+  <div class="mb-3">
+    <button class="btn btn-success me-2" onclick="startMining()">Start Mining</button>
+    <button class="btn btn-danger" onclick="stopMining()">Stop Mining</button>
+  </div>
+
+  <!-- Log output -->
+  <h5>Mining Log</h5>
+  <div class="log-box" id="miningLog">No activity yet.</div>
+
+  <script>
+    let miningInterval = null;
+
+    function appendLog(message) {
+      const logBox = document.getElementById('miningLog');
+      logBox.textContent += `\n${message}`;
+      logBox.scrollTop = logBox.scrollHeight;
+    }
+
+    async function startMining() {
+      const pool = document.getElementById('poolUrl').value.trim();
+      const worker = document.getElementById('workerName').value.trim();
+      const pass = document.getElementById('workerPass').value.trim();
+
+      if (!pool || !worker) {
+        alert('Please fill in Pool URL and Worker Name.');
+        return;
+      }
+
+      appendLog('** Starting mining...');
+      try {
+        const res = await fetch('/run/mining_start', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ pool, worker, pass })
+        });
+        const data = await res.text();
+        appendLog(data);
+        startMiningLogPolling();
+      } catch (err) {
+        appendLog('❌ Error: ' + err.message);
+      }
+    }
+
+    async function stopMining() {
+      appendLog('** Stopping mining...');
+      try {
+        const res = await fetch('/run/mining_stop', { method: 'POST' });
+        const data = await res.text();
+        appendLog(data);
+        stopMiningLogPolling();
+      } catch (err) {
+        appendLog('❌ Error: ' + err.message);
+      }
+    }
+
+    function startMiningLogPolling() {
+      stopMiningLogPolling();
+      miningInterval = setInterval(async () => {
+        const res = await fetch('/run/mining_log');
+        const txt = await res.text();
+        const logBox = document.getElementById('miningLog');
+        logBox.textContent = txt;
+        logBox.scrollTop = logBox.scrollHeight;
+      }, 1000);
+    }
+
+    function stopMiningLogPolling() {
+      if (miningInterval) {
+        clearInterval(miningInterval);
+        miningInterval = null;
+      }
+    }
+
+    window.addEventListener('beforeunload', stopMiningLogPolling);
+  </script>
+</body>
+</html>

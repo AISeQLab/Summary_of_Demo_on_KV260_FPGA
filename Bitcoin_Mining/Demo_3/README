@@ -1,0 +1,8 @@
+Bitcoin with SlushPool
+./main -o stratum+tcp://v2.stratum.braiins.com:3333 -u hoailuan-p.workerName -p anything123,d=2
+
+Auroracoin with p2p-spb.xyz mining pool
+./main -o stratum+tcp://p2p-spb.xyz:12349 -u AMyFqaCoXvYnBrTWSPWHft5QkQNVBZU4Q9 -p 111
+
+Rebel with go-pool mining
+./main -o stratum+tcp://go-poolmining.com:8800 -u RcnLTDVHjRwcwfiLsK76ShbvH91r9SeWb7 -p x
